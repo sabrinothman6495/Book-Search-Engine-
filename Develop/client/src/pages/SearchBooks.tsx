@@ -1,20 +1,24 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Container, Col, Form, Button, Card, Row } from 'react-bootstrap';
 import { useLazyQuery, useMutation } from '@apollo/client';
 import Auth from '../utils/auth';
+import { getSavedBookIds, saveBookIds } from '../utils/localStorage';
 import { SAVE_BOOK } from '../utils/mutations';
+import { SEARCH_BOOKS } from '../utils/queries';
 import type { Book } from '../models/Book';
 import type { GoogleAPIBook } from '../models/GoogleAPIBook';
-import SavedBooks from './SavedBooks';
 
 const SearchBooks = () => {
   const [searchedBooks, setSearchedBooks] = useState<Book[]>([]);
   const [searchInput, setSearchInput] = useState('');
+  const [savedBooks] = useState<string[]>([]);
   const [saveBook] = useMutation(SAVE_BOOK);
-  const [savedBooks, setSavingBookId] = useState<string | null>(null);
-
+  const [saveBookId, setSavingBookId] = useState(getSavedBookIds())
+  useEffect(() => {
+    return () => saveBookIds(saveBookId);
+  });
   const [searchBooks, { loading }] = useLazyQuery(SEARCH_BOOKS, {
     onCompleted: (data) => {
       const bookData = data.searchBooks.map((book: GoogleAPIBook) => ({
@@ -48,12 +52,13 @@ const SearchBooks = () => {
       return false;
     }
 
-    setSavingBookId(bookId); // Set the saving book ID
+    //setSavingBookId(bookId); // Set the saving book ID
 
     try {
       const response = await saveBook({
         variables: { book: bookToSave },
       });
+      setSavingBookId([...saveBookId,bookToSave.bookId])
 
       if (!response.data) {
         throw new Error('something went wrong!');
@@ -114,10 +119,10 @@ const SearchBooks = () => {
                     <Card.Text>{book.description}</Card.Text>
                     {Auth.loggedIn() && (
                       <Button
-                        disabled={savedBooks?.some((savedBookId: string) => savedBookId === book.bookId)}
+                        disabled={savedBooks.includes(book.bookId)}
                         className='btn-block btn-info'
                         onClick={() => handleSaveBook(book.bookId)}>
-                        {SavedBooks?.some((savedBookId: string) => savedBookId === book.bookId)
+                        {savedBooks.includes(book.bookId)
                           ? 'This book has already been saved!'
                           : 'Save this Book!'}
                       </Button>
@@ -125,12 +130,13 @@ const SearchBooks = () => {
                   </Card.Body>
                 </Card>
               </Col>
-            );
-          ))}
+            ))
+
+          )}
         </Row>
       </Container>
+
     </>
   );
-};
-
+}
 export default SearchBooks;

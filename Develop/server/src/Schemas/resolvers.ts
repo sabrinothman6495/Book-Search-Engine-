@@ -1,4 +1,4 @@
-import { User, Book } from '../models/index.js';
+import { User } from '../models/index.js';
 import { signToken, AuthenticationError } from '../services/auth.js';
 
 // To Do: Define types for the arguments
@@ -78,14 +78,18 @@ const resolvers = {
     },
     saveBook: async (_parent: any, { input }:SaveBookArgs, context: any) => {
       if (context.user) {
-        const book = await Book.create({ ...input });
+        //const book = await Book.create({ ...input });
 
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
           { _id: context.user._id },
-          { $addToSet: { book: book._id } }
+          //{ $addToSet: { book: book._id } }
+          {$addToSet:{
+          savedBooks:input 
+          }},
+          { new: true }
         );
 
-        return book;
+        return updatedUser;
       }
       throw AuthenticationError;
       ('You need to be logged in!');
@@ -93,21 +97,22 @@ const resolvers = {
   
     removeBook: async (_parent: any, { bookId }:RemoveBookArgs, context: any) => {
       if (context.user) {
-        const removedBook = await Book.findOneAndDelete({
-          _id: bookId,
-          bookAuthor: context.user.username,
-        });
+        // const removedBook = await Book.findOneAndDelete({
+        //   _id: bookId,
+        //   bookAuthor: context.user.username,
+        // });
 
-        if(!removedBook) {
-          throw new AuthenticationError('Book not found or not authorized.');
-        }
+        // if(!removedBook) {
+        //   throw new AuthenticationError('Book not found or not authorized.');
+        // }
 
-        await User.findOneAndUpdate(
+        const updatedUser = await User.findOneAndUpdate(
           { _id: context.user._id },
-          { $pull: { books: bookId } }
+          { $pull: { savedBooks: {bookId} } },
+          { new: true }
         );
-
-        return removedBook;
+        return updatedUser;
+       // return removedBook;
       }
       throw AuthenticationError;
     },
