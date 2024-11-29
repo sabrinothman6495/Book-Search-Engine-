@@ -13,7 +13,7 @@ export const GET_ME = gql`
     link
       }
     }
-  }
+  
 `;
 //added to resolve issues with "searchBooks" query
 export const SEARCH_BOOKS = gql`
